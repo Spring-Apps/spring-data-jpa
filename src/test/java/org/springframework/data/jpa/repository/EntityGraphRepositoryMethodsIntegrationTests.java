@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 the original author or authors.
+ * Copyright 2014-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,13 +31,16 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.sample.Role;
 import org.springframework.data.jpa.domain.sample.User;
-import org.springframework.data.jpa.repository.sample.RepositoryMethodsWithEntityGraphConfigJpaRepository;
+import org.springframework.data.jpa.repository.sample.RepositoryMethodsWithEntityGraphConfigRepository;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
+ * Integration tests for RepositoryMethodsWithEntityGraphConfigJpaRepository.
+ * 
  * @author Thomas Darimont
+ * @author Oliver Gierke
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration("classpath:config/namespace-autoconfig-context.xml")
@@ -45,21 +48,25 @@ import org.springframework.transaction.annotation.Transactional;
 public class EntityGraphRepositoryMethodsIntegrationTests {
 
 	@Autowired EntityManager em;
-	@Autowired RepositoryMethodsWithEntityGraphConfigJpaRepository repository;
+	@Autowired RepositoryMethodsWithEntityGraphConfigRepository repository;
 
 	User tom;
-	User olli;
+	User ollie;
 	Role role;
 
 	@Before
 	public void setup() {
 
 		tom = new User("Thomas", "Darimont", "tdarimont@example.org");
-		olli = new User("Oliver", "Gierke", "ogierke@example.org");
+		ollie = new User("Oliver", "Gierke", "ogierke@example.org");
 
 		role = new Role("Developer");
 		em.persist(role);
 		tom.getRoles().add(role);
+		tom = repository.save(tom);
+
+		ollie = repository.save(ollie);
+		tom.getColleagues().add(ollie);
 	}
 
 	/**
@@ -70,11 +77,9 @@ public class EntityGraphRepositoryMethodsIntegrationTests {
 
 		Assume.assumeTrue(currentEntityManagerIsAJpa21EntityManager(em));
 
-		tom = repository.save(tom);
-
 		List<User> result = repository.findAll();
 
-		assertThat(result.size(), is(1));
+		assertThat(result.size(), is(2));
 		assertThat(Persistence.getPersistenceUtil().isLoaded(result.get(0).getRoles()), is(true));
 		assertThat(result.get(0), is(tom));
 	}
@@ -87,13 +92,37 @@ public class EntityGraphRepositoryMethodsIntegrationTests {
 
 		Assume.assumeTrue(currentEntityManagerIsAJpa21EntityManager(em));
 
-		olli = repository.save(olli);
-		tom.getColleagues().add(olli);
-		tom = repository.save(tom);
-
-		em.flush();
-
 		User user = repository.findOne(tom.getId());
+
+		assertThat(user, is(notNullValue()));
+		assertThat("colleages should be fetched with 'user.detail' fetchgraph",
+				Persistence.getPersistenceUtil().isLoaded(user.getColleagues()), is(true));
+	}
+
+	/**
+	 * @see DATAJPA-696
+	 */
+	@Test
+	public void shouldRespectInferFetchGraphFromMethodName() {
+
+		Assume.assumeTrue(currentEntityManagerIsAJpa21EntityManager(em));
+
+		User user = repository.getOneWithDefinedEntityGraphById(tom.getId());
+
+		assertThat(user, is(notNullValue()));
+		assertThat("colleages should be fetched with 'user.detail' fetchgraph",
+				Persistence.getPersistenceUtil().isLoaded(user.getColleagues()), is(true));
+	}
+
+	/**
+	 * @see DATAJPA-696
+	 */
+	@Test
+	public void shouldRespectDynamicFetchGraphForGetOneWithAttributeNamesById() {
+
+		Assume.assumeTrue(currentEntityManagerIsAJpa21EntityManager(em));
+
+		User user = repository.getOneWithAttributeNamesById(tom.getId());
 
 		assertThat(user, is(notNullValue()));
 		assertThat("colleages should be fetched with 'user.detail' fetchgraph",

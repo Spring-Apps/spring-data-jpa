@@ -15,7 +15,6 @@
 		<groupId>org.springframework.data.build</groupId>
 		<artifactId>spring-data-parent</artifactId>
 		<version>1.7.0.BUILD-SNAPSHOT</version>
-		<relativePath>../spring-data-build/parent/pom.xml</relativePath>
 	</parent>
 
 	<properties>
@@ -43,14 +42,32 @@
 		<profile>
 			<id>hibernate-42</id>
 			<properties>
-				<hibernate>4.2.11.Final</hibernate>
+				<hibernate>4.2.19.Final</hibernate>
 			</properties>
 		</profile>
 		<profile>
 			<id>hibernate-43</id>
 			<properties>
-				<hibernate>4.3.4.Final</hibernate>
+				<hibernate>4.3.9.Final</hibernate>
 			</properties>
+		</profile>
+		<profile>
+			<id>hibernate-5</id>
+			<properties>
+				<hibernate>5.0.0.Beta2</hibernate>
+			</properties>
+		</profile>
+		<profile>
+			<id>hibernate-5-next</id>
+			<properties>
+				<hibernate>5.0.0-SNAPSHOT</hibernate>
+			</properties>
+			<repositories>
+				<repository>
+					<id>jboss</id>
+					<url>https://repository.jboss.org/nexus/content/repositories/public</url>
+				</repository>
+			</repositories>
 		</profile>
 	</profiles>
 
@@ -309,7 +326,7 @@
 							<includes>
 								<include>**/EclipseLink*Tests.java</include>
 							</includes>
-							<argLine>-javaagent:${settings.localRepository}/org/springframework/spring-instrument/${spring}/spring-instrument-${spring}.jar</argLine>
+							<argLine>-javaagent:${settings.localRepository}/org/eclipse/persistence/org.eclipse.persistence.jpa/${eclipselink}/org.eclipse.persistence.jpa-${eclipselink}.jar -javaagent:${settings.localRepository}/org/springframework/spring-instrument/${spring}/spring-instrument-${spring}.jar</argLine>
 						</configuration>
 					</execution>
 					<execution>

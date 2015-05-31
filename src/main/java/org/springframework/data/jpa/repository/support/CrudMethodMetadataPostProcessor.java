@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2014 the original author or authors.
+ * Copyright 2011-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,6 @@ import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.QueryHints;
-import org.springframework.data.jpa.repository.query.JpaEntityGraph;
 import org.springframework.data.repository.core.RepositoryInformation;
 import org.springframework.data.repository.core.support.RepositoryProxyPostProcessor;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -60,7 +59,7 @@ enum CrudMethodMetadataPostProcessor implements RepositoryProxyPostProcessor {
 	public void postProcess(ProxyFactory factory, RepositoryInformation repositoryInformation) {
 
 		factory.addAdvice(ExposeInvocationInterceptor.INSTANCE);
-		factory.addAdvice(CrudMethodMetadataPopulatingMethodIntercceptor.INSTANCE);
+		factory.addAdvice(CrudMethodMetadataPopulatingMethodInterceptor.INSTANCE);
 	}
 
 	/**
@@ -85,7 +84,7 @@ enum CrudMethodMetadataPostProcessor implements RepositoryProxyPostProcessor {
 	 * @author Oliver Gierke
 	 * @author Thomas Darimont
 	 */
-	static enum CrudMethodMetadataPopulatingMethodIntercceptor implements MethodInterceptor {
+	static enum CrudMethodMetadataPopulatingMethodInterceptor implements MethodInterceptor {
 
 		INSTANCE;
 
@@ -136,7 +135,8 @@ enum CrudMethodMetadataPostProcessor implements RepositoryProxyPostProcessor {
 
 		private final LockModeType lockModeType;
 		private final Map<String, Object> queryHints;
-		private final JpaEntityGraph entityGraph;
+		private final EntityGraph entityGraph;
+		private final Method method;
 
 		/**
 		 * Creates a new {@link DefaultCrudMethodMetadata} for the given {@link Method}.
@@ -150,13 +150,11 @@ enum CrudMethodMetadataPostProcessor implements RepositoryProxyPostProcessor {
 			this.lockModeType = findLockModeType(method);
 			this.queryHints = findQueryHints(method);
 			this.entityGraph = findEntityGraph(method);
+			this.method = method;
 		}
 
-		private static JpaEntityGraph findEntityGraph(Method method) {
-
-			EntityGraph entityGraphAnnotation = AnnotationUtils.findAnnotation(method, EntityGraph.class);
-			return entityGraphAnnotation == null ? null : new JpaEntityGraph(entityGraphAnnotation.value(),
-					entityGraphAnnotation.type());
+		private static EntityGraph findEntityGraph(Method method) {
+			return AnnotationUtils.findAnnotation(method, EntityGraph.class);
 		}
 
 		private static LockModeType findLockModeType(Method method) {
@@ -206,11 +204,20 @@ enum CrudMethodMetadataPostProcessor implements RepositoryProxyPostProcessor {
 
 		/* 
 		 * (non-Javadoc)
-		 * @see org.springframework.data.jpa.repository.support.CrudMethodMetadata#getEntityGraphHint()
+		 * @see org.springframework.data.jpa.repository.support.CrudMethodMetadata#getEntityGraph()
 		 */
 		@Override
-		public JpaEntityGraph getEntityGraph() {
-			return this.entityGraph;
+		public EntityGraph getEntityGraph() {
+			return entityGraph;
+		}
+
+		/* 
+		 * (non-Javadoc)
+		 * @see org.springframework.data.jpa.repository.support.CrudMethodMetadata#getMethod()
+		 */
+		@Override
+		public Method getMethod() {
+			return method;
 		}
 	}
 
